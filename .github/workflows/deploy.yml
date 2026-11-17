@@ -1,0 +1,43 @@
+
+name: Deploy Anesthesia Logbook to Cloudflare Pages
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'website.zip'
+      - '.github/workflows/deploy.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  deployments: write
+
+jobs:
+  deploy:
+    name: Extract ZIP and deploy
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Extract website ZIP
+        shell: bash
+        run: |
+          rm -rf dist
+          mkdir -p dist
+          unzip -q website.zip -d dist
+          if [ ! -f dist/index.html ]; then
+            echo 'ERROR: index.html not found at ZIP root'
+            exit 1
+          fi
+
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v4
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy dist --project-name=anesthesia-logbook-direct --branch=main
+          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
